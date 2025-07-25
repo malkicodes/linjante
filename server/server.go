@@ -2,35 +2,14 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
 	"linjante/generation"
+	"linjante/server/errors"
+	"linjante/server/middleware"
 	"linjante/words"
 )
-
-func LoggerMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-		log.Printf("[%s] %s", r.Method, r.URL.EscapedPath())
-	})
-}
-
-func HandleUserError(w http.ResponseWriter, err string) {
-	w.WriteHeader(400)
-	response, _ := json.Marshal(map[string]string{"error": err})
-
-	w.Write(response)
-}
-
-func HandleServerError(w http.ResponseWriter, err error) {
-	w.WriteHeader(500)
-	response, _ := json.Marshal(map[string]string{"error": err.Error()})
-
-	w.Write(response)
-}
 
 func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string) {
 	response, _ := json.Marshal(map[string]any{
@@ -51,10 +30,10 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 	} else {
 		countInt, err := strconv.Atoi(countRaw)
 		if err != nil {
-			HandleUserError(w, "invalid count")
+			errors.HandleUserError(w, "invalid count")
 			return
 		} else if countInt > 50 || countInt < 1 {
-			HandleUserError(w, "count must be between 1 and 50")
+			errors.HandleUserError(w, "count must be between 1 and 50")
 			return
 		} else {
 			count = uint8(countInt)
@@ -75,7 +54,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 
 		response, err := json.Marshal(data)
 		if err != nil {
-			HandleServerError(w, err)
+			errors.HandleServerError(w, err)
 			return
 		}
 
@@ -106,13 +85,13 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 
 		response, err := json.Marshal(data)
 		if err != nil {
-			HandleServerError(w, err)
+			errors.HandleServerError(w, err)
 			return
 		}
 
 		w.Write(response)
 	default:
-		HandleUserError(w, "invalid v")
+		errors.HandleUserError(w, "invalid v")
 	}
 }
 
@@ -148,7 +127,7 @@ func WordsHandler(w http.ResponseWriter, r *http.Request, words []words.Word) {
 	response, err := json.Marshal(wordList)
 
 	if err != nil {
-		HandleServerError(w, err)
+		errors.HandleServerError(w, err)
 		return
 	}
 
@@ -193,5 +172,5 @@ func RunServer(port int, words []words.Word) error {
 		WordsHandler(w, r, words)
 	}))
 
-	return http.ListenAndServe(":"+strconv.Itoa(port), LoggerMiddleware(mux))
+	return http.ListenAndServe(":"+strconv.Itoa(port), middleware.LoggerMiddleware(middleware.RateLimitMiddleware(mux)))
 }
