@@ -1,12 +1,13 @@
 package middleware
 
 import (
-	"linjante/server/errors"
 	"log"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"malki.codes/linjante/server/errors"
 
 	"golang.org/x/time/rate"
 )

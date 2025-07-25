@@ -1,4 +1,4 @@
-module linjante
+module malki.codes/linjante
 
 go 1.23.0
 

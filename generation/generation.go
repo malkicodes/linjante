@@ -1,10 +1,11 @@
 package generation
 
 import (
-	"linjante/words"
 	"math/rand/v2"
 	"strings"
 	"sync"
+
+	"malki.codes/linjante/words"
 )
 
 type Sentence struct {

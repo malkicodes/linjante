@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"linjante/generation"
-	"linjante/server/errors"
-	"linjante/server/middleware"
-	"linjante/words"
+	"malki.codes/linjante/generation"
+	"malki.codes/linjante/server/errors"
+	"malki.codes/linjante/server/middleware"
+	"malki.codes/linjante/words"
 )
 
 func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string, wordCount int) {

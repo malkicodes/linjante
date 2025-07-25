@@ -5,8 +5,8 @@ import (
 	"os"
 	"strconv"
 
-	"linjante/server"
-	"linjante/words"
+	"malki.codes/linjante/server"
+	"malki.codes/linjante/words"
 )
 
 func main() {
