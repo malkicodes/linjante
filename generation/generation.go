@@ -4,6 +4,7 @@ import (
 	"linjante/words"
 	"math/rand/v2"
 	"strings"
+	"sync"
 )
 
 type Sentence struct {
@@ -151,4 +152,31 @@ func CreateSentence(wordRoles map[uint8][]string) Sentence {
 		PrepositionalPhrases: prepPhrases,
 		Components:           components,
 	}
+}
+
+func GenerateSentences(count uint8, wordRoles map[uint8][]string) []Sentence {
+	results := make([]Sentence, 0, count)
+	var wg sync.WaitGroup
+
+	ch := make(chan Sentence, count)
+
+	for range count {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			ch <- CreateSentence(wordRoles)
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for v := range ch {
+		results = append(results, v)
+	}
+
+	return results
 }

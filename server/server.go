@@ -61,22 +61,19 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 		}
 	}
 
-	verboseRaw := r.URL.Query().Get("v")
+	verbose := r.URL.Query().Get("v")
 
-	switch verboseRaw {
+	sentences := generation.GenerateSentences(count, wordRoles)
+
+	switch verbose {
 	case "", "false":
-		sentences := make([]string, 0, count)
+		data := make([]string, 0, count)
 
-		for i := uint8(0); i < count; i++ {
-			sentence := generation.CreateSentence(wordRoles)
-			sentences = append(sentences, sentence.Sentence)
+		for _, v := range sentences {
+			data = append(data, v.Sentence)
 		}
 
-		response, err := json.Marshal(map[string]any{
-			"sentences": sentences,
-			"count":     count,
-		})
-
+		response, err := json.Marshal(data)
 		if err != nil {
 			HandleServerError(w, err)
 			return
@@ -84,37 +81,30 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 
 		w.Write(response)
 	case "true":
-		sentences := make([]map[string]any, 0, count)
+		data := make([]map[string]any, 0, count)
 
-		for i := uint8(0); i < count; i++ {
-			sentence := generation.CreateSentence(wordRoles)
-
+		for _, v := range sentences {
 			roles := map[string]any{
-				"subject": sentence.Subject,
-				"verb":    sentence.Verb,
-				"object":  sentence.Object,
+				"subject": v.Subject,
+				"verb":    v.Verb,
 			}
 
-			if sentence.Object == "" {
-				roles["object"] = nil
+			if v.Object != "" {
+				roles["object"] = v.Object
 			}
 
-			if len(sentence.PrepositionalPhrases) > 0 {
-				roles["prepositions"] = sentence.PrepositionalPhrases
+			if len(v.PrepositionalPhrases) > 0 {
+				roles["prepositions"] = v.PrepositionalPhrases
 			}
 
-			sentences = append(sentences, map[string]any{
-				"sentence":   sentence.Sentence,
-				"components": sentence.Components,
-				"roles":      roles,
+			data = append(data, map[string]any{
+				"sentence":  v.Sentence,
+				"compoents": v.Components,
+				"roles":     roles,
 			})
 		}
 
-		response, err := json.Marshal(map[string]any{
-			"sentences": sentences,
-			"count":     count,
-		})
-
+		response, err := json.Marshal(data)
 		if err != nil {
 			HandleServerError(w, err)
 			return
@@ -123,7 +113,6 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 		w.Write(response)
 	default:
 		HandleUserError(w, "invalid v")
-		return
 	}
 }
 
