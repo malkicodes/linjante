@@ -17,7 +17,7 @@ All data for words is from [sona Linku](https://github.com/lipu-linku/sona).
 3. Clone [sona Linku](https://github.com/lipu-linku/sona) into `./sona`
 
     ```bash
-    git clone https://github.com/lipu-linku/sona
+    git clone https://github.com/lipu-linku/sona.git
     ```
 
 4. Run the server
