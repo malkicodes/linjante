@@ -20,7 +20,7 @@ func PickRandom[T any](slice []T) T {
 	return slice[rand.IntN(len(slice))]
 }
 
-func GetContentWord(contentWords []string) string {
+func GenerateContentWord(contentWords []string) string {
 	word := ""
 
 	for word == "" || word == "ni" || word == "mi" || word == "sina" || word == "ona" {
@@ -30,7 +30,7 @@ func GetContentWord(contentWords []string) string {
 	return word
 }
 
-func CreateNoun(contentWords []string) string {
+func GenerateNoun(contentWords []string) string {
 	if rand.IntN(3) == 1 {
 		// Uses a pronoun
 		pronoun := rand.IntN(4)
@@ -46,7 +46,7 @@ func CreateNoun(contentWords []string) string {
 			return "ni"
 		}
 	} else {
-		word := GetContentWord(contentWords)
+		word := GenerateContentWord(contentWords)
 
 		if rand.Float32() > 0.5 {
 			word = word + " " + PickRandom(contentWords)
@@ -56,7 +56,7 @@ func CreateNoun(contentWords []string) string {
 	}
 }
 
-func CreateSentence(wordRoles map[uint8][]string) Sentence {
+func GenerateSentence(wordRoles map[uint8][]string) Sentence {
 	contentWords := wordRoles[uint8(words.Content)]
 	preverbWords := wordRoles[uint8(words.Preverb)]
 	prepositionWords := wordRoles[uint8(words.Preposition)]
@@ -64,10 +64,10 @@ func CreateSentence(wordRoles map[uint8][]string) Sentence {
 	components := make([]string, 0)
 
 	// Subject
-	subject := CreateNoun(contentWords)
+	subject := GenerateNoun(contentWords)
 
 	// Verb
-	verb := GetContentWord(contentWords)
+	verb := GenerateContentWord(contentWords)
 
 	hasNegation := false
 
@@ -92,7 +92,7 @@ func CreateSentence(wordRoles map[uint8][]string) Sentence {
 
 	if rand.IntN(3) != 0 {
 		// Has object
-		object = CreateNoun(contentWords)
+		object = GenerateNoun(contentWords)
 	}
 
 	// Form sentence
@@ -133,7 +133,7 @@ func CreateSentence(wordRoles map[uint8][]string) Sentence {
 				}
 			}
 
-			prepPhrases = append(prepPhrases, preposition+" "+CreateNoun(contentWords))
+			prepPhrases = append(prepPhrases, preposition+" "+GenerateNoun(contentWords))
 		}
 	}
 
@@ -165,7 +165,7 @@ func GenerateSentences(count uint8, wordRoles map[uint8][]string) []Sentence {
 		go func() {
 			defer wg.Done()
 
-			ch <- CreateSentence(wordRoles)
+			ch <- GenerateSentence(wordRoles)
 		}()
 	}
 

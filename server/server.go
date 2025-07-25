@@ -34,7 +34,7 @@ func HandleServerError(w http.ResponseWriter, err error) {
 
 func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string) {
 	response, _ := json.Marshal(map[string]any{
-		"message": generation.CreateSentence(wordRoles).Sentence,
+		"message": generation.GenerateSentence(wordRoles).Sentence,
 		"up":      true,
 	})
 
