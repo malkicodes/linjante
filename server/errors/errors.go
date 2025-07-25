@@ -5,6 +5,13 @@ import (
 	"net/http"
 )
 
+func HandleNotFoundError(w http.ResponseWriter) {
+	w.WriteHeader(404)
+	response, _ := json.Marshal(map[string]string{"error": "Not Found"})
+
+	w.Write(response)
+}
+
 func HandleUserError(w http.ResponseWriter, err string) {
 	w.WriteHeader(400)
 	response, _ := json.Marshal(map[string]string{"error": err})

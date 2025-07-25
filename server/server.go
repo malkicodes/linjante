@@ -151,25 +151,34 @@ func RunServer(port int, words []words.Word) error {
 		}
 	}
 
-	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.EscapedPath()
 
 		if path == "/" {
 			RootHandler(w, r, wordRoles)
 		} else {
-			w.WriteHeader(404)
-			response, _ := json.Marshal(map[string]string{"error": "Not Found"})
-
-			w.Write(response)
+			errors.HandleNotFoundError(w)
 		}
 	}))
 
-	mux.Handle("/gen", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		GenerateHandler(w, r, wordRoles)
+	mux.Handle("GET /gen", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.EscapedPath()
+
+		if path == "/gen" {
+			GenerateHandler(w, r, wordRoles)
+		} else {
+			errors.HandleNotFoundError(w)
+		}
 	}))
 
-	mux.Handle("/words", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		WordsHandler(w, r, words)
+	mux.Handle("GET /words", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.EscapedPath()
+
+		if path == "/gen" {
+			WordsHandler(w, r, words)
+		} else {
+			errors.HandleNotFoundError(w)
+		}
 	}))
 
 	return http.ListenAndServe(":"+strconv.Itoa(port), middleware.LoggerMiddleware(middleware.RateLimitMiddleware(mux)))
