@@ -44,23 +44,19 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 
 	sentences := generation.GenerateSentences(count, wordRoles)
 
+	var data any
+
 	switch verbose {
 	case "", "false":
-		data := make([]string, 0, count)
+		sentenceList := make([]string, 0, count)
 
 		for _, v := range sentences {
-			data = append(data, v.Sentence)
+			sentenceList = append(sentenceList, v.Sentence)
 		}
 
-		response, err := json.Marshal(data)
-		if err != nil {
-			errors.HandleServerError(w, err)
-			return
-		}
-
-		w.Write(response)
+		data = sentenceList
 	case "true":
-		data := make([]map[string]any, 0, count)
+		sentenceList := make([]map[string]any, 0, count)
 
 		for _, v := range sentences {
 			roles := map[string]any{
@@ -76,23 +72,31 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 				roles["prepositions"] = v.PrepositionalPhrases
 			}
 
-			data = append(data, map[string]any{
+			sentenceList = append(sentenceList, map[string]any{
 				"sentence":  v.Sentence,
 				"compoents": v.Components,
 				"roles":     roles,
 			})
 		}
 
-		response, err := json.Marshal(data)
-		if err != nil {
-			errors.HandleServerError(w, err)
-			return
-		}
+		data = sentenceList
 
-		w.Write(response)
 	default:
 		errors.HandleUserError(w, "invalid v")
+		return
 	}
+
+	response, err := json.Marshal(map[string]any{
+		"count":     count,
+		"sentences": data,
+	})
+
+	if err != nil {
+		errors.HandleServerError(w, err)
+		return
+	}
+
+	w.Write(response)
 }
 
 func getRoleNames(roles []words.WordRole) []string {
