@@ -3,160 +3,12 @@ package server
 import (
 	"encoding/json"
 	"log"
-	"math/rand/v2"
 	"net/http"
 	"strconv"
-	"strings"
 
+	"linjante/generation"
 	"linjante/words"
 )
-
-type Sentence struct {
-	Sentence             string
-	Subject              string
-	Verb                 string
-	Object               string
-	PrepositionalPhrases []string
-	Components           []string
-}
-
-func pickRandom[T any](slice []T) T {
-	return slice[rand.IntN(len(slice))]
-}
-
-func getContentWord(contentWords []string) string {
-	word := ""
-
-	for word == "" || word == "ni" || word == "mi" || word == "sina" || word == "ona" {
-		word = pickRandom(contentWords)
-	}
-
-	return word
-}
-
-func createNoun(contentWords []string) string {
-	if rand.IntN(3) == 1 {
-		// Uses a pronoun
-		pronoun := rand.IntN(4)
-
-		switch pronoun {
-		case 0:
-			return "mi"
-		case 1:
-			return "sina"
-		case 2:
-			return "ona"
-		default:
-			return "ni"
-		}
-	} else {
-		word := getContentWord(contentWords)
-
-		if rand.Float32() > 0.5 {
-			word = word + " " + pickRandom(contentWords)
-		}
-
-		return word
-	}
-}
-
-func createSentence(wordRoles map[uint8][]string) Sentence {
-	contentWords := wordRoles[uint8(words.Content)]
-	preverbWords := wordRoles[uint8(words.Preverb)]
-	prepositionWords := wordRoles[uint8(words.Preposition)]
-
-	components := make([]string, 0)
-
-	// Subject
-	subject := createNoun(contentWords)
-
-	// Verb
-	verb := getContentWord(contentWords)
-
-	hasNegation := false
-
-	if rand.IntN(3) == 0 {
-		// Use preverb
-		preverb := pickRandom(preverbWords)
-
-		if rand.IntN(4) == 0 {
-			hasNegation = true
-			preverb += " ala"
-		}
-
-		verb = preverb + " " + verb
-	}
-
-	if (!hasNegation) && rand.IntN(4) == 0 {
-		verb += " ala"
-	}
-
-	// Object
-	object := ""
-
-	if rand.IntN(3) != 0 {
-		// Has object
-		object = createNoun(contentWords)
-	}
-
-	// Form sentence
-	sentence := subject + " "
-
-	if subject != "mi" && subject != "sina" {
-		sentence += "li "
-	}
-
-	sentence += verb
-
-	if object != "" {
-		sentence += " e " + object
-	}
-
-	components = append(components, subject)
-	components = append(components, verb)
-
-	if object != "" {
-		components = append(components, object)
-	}
-
-	// Prepositions
-	prepPhrases := make([]string, 0)
-	usedLon := false
-
-	if rand.IntN(3) == 0 {
-		prepPhraseCount := rand.IntN(2) + 1
-		for len(prepPhrases) < prepPhraseCount {
-			preposition := ""
-
-			if !usedLon && rand.IntN(2) == 0 {
-				preposition = "lon"
-				usedLon = true
-			} else {
-				for preposition == "" || preposition == "lon" {
-					preposition = pickRandom(prepositionWords)
-				}
-			}
-
-			prepPhrases = append(prepPhrases, preposition+" "+createNoun(contentWords))
-		}
-	}
-
-	if len(prepPhrases) > 0 {
-		prepPhrasesString := strings.Join(prepPhrases, " ")
-		sentence += " " + prepPhrasesString
-
-		components = append(components, prepPhrases...)
-	}
-
-	return Sentence{
-		Sentence:             sentence,
-		Subject:              subject,
-		Verb:                 verb,
-		Object:               object,
-		PrepositionalPhrases: prepPhrases,
-		Components:           components,
-	}
-}
 
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +34,7 @@ func HandleServerError(w http.ResponseWriter, err error) {
 
 func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string) {
 	response, _ := json.Marshal(map[string]any{
-		"message": createSentence(wordRoles).Sentence,
+		"message": generation.CreateSentence(wordRoles).Sentence,
 		"up":      true,
 	})
 
@@ -216,7 +68,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 		sentences := make([]string, 0, count)
 
 		for i := uint8(0); i < count; i++ {
-			sentence := createSentence(wordRoles)
+			sentence := generation.CreateSentence(wordRoles)
 			sentences = append(sentences, sentence.Sentence)
 		}
 
@@ -235,7 +87,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 		sentences := make([]map[string]any, 0, count)
 
 		for i := uint8(0); i < count; i++ {
-			sentence := createSentence(wordRoles)
+			sentence := generation.CreateSentence(wordRoles)
 
 			roles := map[string]any{
 				"subject": sentence.Subject,
