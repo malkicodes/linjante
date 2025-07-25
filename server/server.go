@@ -11,12 +11,14 @@ import (
 	"linjante/words"
 )
 
-func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string) {
+func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string, wordCount int) {
 	response, _ := json.Marshal(map[string]any{
 		"message": generation.GenerateSentence(wordRoles).Sentence,
+		"words":   wordCount,
 		"up":      true,
 	})
 
+	w.WriteHeader(200)
 	w.Write(response)
 }
 
@@ -96,6 +98,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 		return
 	}
 
+	w.WriteHeader(200)
 	w.Write(response)
 }
 
@@ -135,6 +138,7 @@ func WordsHandler(w http.ResponseWriter, r *http.Request, words []words.Word) {
 		return
 	}
 
+	w.WriteHeader(200)
 	w.Write(response)
 }
 
@@ -142,6 +146,7 @@ func RunServer(port int, words []words.Word) error {
 	mux := http.NewServeMux()
 
 	wordRoles := make(map[uint8][]string)
+	wordCount := len(words)
 
 	for _, word := range words {
 		for _, role := range word.Roles {
@@ -159,7 +164,7 @@ func RunServer(port int, words []words.Word) error {
 		path := r.URL.EscapedPath()
 
 		if path == "/" {
-			RootHandler(w, r, wordRoles)
+			RootHandler(w, r, wordRoles, wordCount)
 		} else {
 			errors.HandleNotFoundError(w)
 		}

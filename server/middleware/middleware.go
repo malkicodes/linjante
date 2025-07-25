@@ -11,6 +11,15 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	Red    = "\x1b[31m"
+	Green  = "\x1b[32m"
+	Yellow = "\x1b[33m"
+	Blue   = "\x1b[34m"
+	Gray   = "\x1b[90m"
+	Reset  = "\x1b[0m"
+)
+
 const RATELIMIT_PER rate.Limit = 5
 const RATELIMIT_BURST int = 1
 const RATELIMIT_AUTOCLEAR_INTERVAL time.Duration = 15 * time.Minute
@@ -97,10 +106,39 @@ func RateLimitMiddleware(next http.Handler) *RateLimiter {
 	return &rateLimiter
 }
 
+type WrappedResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (w *WrappedResponseWriter) WriteHeader(statusCode int) {
+	w.ResponseWriter.WriteHeader(statusCode)
+	w.statusCode = statusCode
+}
+
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-		log.Printf("[%s] %s", r.Method, r.URL.EscapedPath())
+
+		wrapped := &WrappedResponseWriter{
+			ResponseWriter: w,
+		}
+
+		next.ServeHTTP(wrapped, r)
+
+		var statusCodeColor string
+
+		switch {
+		case wrapped.statusCode >= 500:
+			statusCodeColor = Red
+		case wrapped.statusCode >= 400:
+			statusCodeColor = Yellow
+		case wrapped.statusCode >= 200 && wrapped.statusCode < 300:
+			statusCodeColor = Green
+		default:
+			statusCodeColor = Blue
+		}
+
+		log.Printf("[%s] %s%s%s %d%s", r.Method, Gray, r.URL.EscapedPath(), statusCodeColor, wrapped.statusCode, Reset)
 	})
 }
