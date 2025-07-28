@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"malki.codes/linjante/server/errors"
+	"malki.codes/linjante/server/errorhandler"
 
 	"golang.org/x/time/rate"
 )
@@ -61,14 +61,14 @@ func (rl *RateLimiter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 
 	if err != nil {
-		errors.HandleServerError(w, err)
+		errorhandler.HandleServerError(w, err)
 		return
 	}
 
 	limiter := rl.getLimiter(host)
 
 	if !limiter.Allow() {
-		errors.HandleRateLimitError(w)
+		errorhandler.HandleRateLimitError(w)
 		return
 	}
 

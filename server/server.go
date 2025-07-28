@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"malki.codes/linjante/generation"
-	"malki.codes/linjante/server/errors"
+	"malki.codes/linjante/server/errorhandler"
 	"malki.codes/linjante/server/middleware"
 	"malki.codes/linjante/words"
 )
@@ -32,10 +32,10 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, g *generation.Gener
 	} else {
 		countInt, err := strconv.Atoi(countRaw)
 		if err != nil {
-			errors.HandleUserError(w, "invalid count")
+			errorhandler.HandleUserError(w, "invalid count")
 			return
 		} else if countInt > 50 || countInt < 1 {
-			errors.HandleUserError(w, "count must be between 1 and 50")
+			errorhandler.HandleUserError(w, "count must be between 1 and 50")
 			return
 		} else {
 			count = uint8(countInt)
@@ -84,7 +84,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, g *generation.Gener
 		data = sentenceList
 
 	default:
-		errors.HandleUserError(w, "invalid v")
+		errorhandler.HandleUserError(w, "invalid v")
 		return
 	}
 
@@ -94,7 +94,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, g *generation.Gener
 	})
 
 	if err != nil {
-		errors.HandleServerError(w, err)
+		errorhandler.HandleServerError(w, err)
 		return
 	}
 
@@ -134,7 +134,7 @@ func WordsHandler(w http.ResponseWriter, r *http.Request, g *generation.Generato
 	response, err := json.Marshal(wordList)
 
 	if err != nil {
-		errors.HandleServerError(w, err)
+		errorhandler.HandleServerError(w, err)
 		return
 	}
 
@@ -156,7 +156,7 @@ func RunServer(port int) error {
 		if path == "/" {
 			RootHandler(w, r, &generator)
 		} else {
-			errors.HandleNotFoundError(w)
+			errorhandler.HandleNotFoundError(w)
 		}
 	}))
 
@@ -166,17 +166,17 @@ func RunServer(port int) error {
 		if path == "/gen" {
 			GenerateHandler(w, r, &generator)
 		} else {
-			errors.HandleNotFoundError(w)
+			errorhandler.HandleNotFoundError(w)
 		}
 	}))
 
 	mux.Handle("GET /words", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.EscapedPath()
 
-		if path == "/gen" {
+		if path == "/words" {
 			WordsHandler(w, r, &generator)
 		} else {
-			errors.HandleNotFoundError(w)
+			errorhandler.HandleNotFoundError(w)
 		}
 	}))
 
