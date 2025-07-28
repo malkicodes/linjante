@@ -125,7 +125,11 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			ResponseWriter: w,
 		}
 
+		start := time.Now()
+
 		next.ServeHTTP(wrapped, r)
+
+		elapsed := time.Since(start)
 
 		var statusCodeColor string
 
@@ -140,6 +144,6 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			statusCodeColor = Blue
 		}
 
-		log.Printf("[%s] %s%s%s %d%s", r.Method, Gray, r.URL.EscapedPath(), statusCodeColor, wrapped.statusCode, Reset)
+		log.Printf("[%s] %s%s%s %d%s %s", r.Method, Gray, r.URL.EscapedPath(), statusCodeColor, wrapped.statusCode, Reset, elapsed)
 	})
 }
