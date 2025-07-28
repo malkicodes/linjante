@@ -75,9 +75,9 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, g *generation.Gener
 			}
 
 			sentenceList = append(sentenceList, map[string]any{
-				"sentence":  v.Sentence,
-				"compoents": v.Components,
-				"roles":     roles,
+				"sentence":   v.Sentence,
+				"components": v.Components,
+				"roles":      roles,
 			})
 		}
 
