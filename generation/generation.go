@@ -2,11 +2,12 @@ package generation
 
 import (
 	"math/rand/v2"
-	"strings"
 	"sync"
 
 	"malki.codes/linjante/words"
 )
+
+type WordRole uint8
 
 type Sentence struct {
 	Sentence             string
@@ -17,58 +18,83 @@ type Sentence struct {
 	Components           []string
 }
 
+type Generator struct {
+	WordList  []words.Word
+	WordRoles map[uint8][]string
+	WordCount int
+
+	nonLonPrepositions []string
+}
+
 func PickRandom[T any](slice []T) T {
 	return slice[rand.IntN(len(slice))]
 }
 
-func GenerateContentWord(contentWords []string) string {
-	word := ""
-
-	for word == "" || word == "ni" || word == "mi" || word == "sina" || word == "ona" {
-		word = PickRandom(contentWords)
+func NewGenerator() (Generator, error) {
+	wordList, err := words.LoadWords()
+	if err != nil {
+		return Generator{}, err
 	}
 
-	return word
+	wordRoles := make(map[uint8][]string, 0)
+
+	for _, word := range wordList {
+		for _, role := range word.Roles {
+			wordList, prs := wordRoles[uint8(role)]
+
+			if !prs {
+				wordRoles[uint8(role)] = []string{word.Word}
+			} else {
+				wordRoles[uint8(role)] = append(wordList, word.Word)
+			}
+		}
+	}
+
+	prepositions := wordRoles[uint8(words.Preposition)]
+
+	nonLon := make([]string, 0)
+	i := 0
+
+	for i < len(prepositions) {
+		if prepositions[i] == "lon" {
+			break
+		}
+		nonLon = append(nonLon, prepositions[i])
+		i++
+	}
+
+	nonLon = append(nonLon, prepositions[i+1:]...)
+
+	return Generator{
+		WordList:           wordList,
+		WordCount:          len(wordList),
+		WordRoles:          wordRoles,
+		nonLonPrepositions: nonLon,
+	}, nil
 }
 
-func GenerateNoun(contentWords []string) string {
+func (g *Generator) GenerateContentWord() string {
+	return PickRandom(g.WordRoles[uint8(words.Content)])
+}
+
+func (g *Generator) GenerateNoun() string {
 	if rand.IntN(3) == 1 {
 		// Uses a pronoun
-		pronoun := rand.IntN(4)
-
-		switch pronoun {
-		case 0:
-			return "mi"
-		case 1:
-			return "sina"
-		case 2:
-			return "ona"
-		default:
-			return "ni"
-		}
+		return PickRandom(g.WordRoles[uint8(words.Pronoun)])
 	} else {
-		word := GenerateContentWord(contentWords)
+		word := g.GenerateContentWord()
 
 		if rand.Float32() > 0.5 {
-			word = word + " " + PickRandom(contentWords)
+			word = word + " " + g.GenerateContentWord()
 		}
 
 		return word
 	}
 }
 
-func GenerateSentence(wordRoles map[uint8][]string) Sentence {
-	contentWords := wordRoles[uint8(words.Content)]
-	preverbWords := wordRoles[uint8(words.Preverb)]
-	prepositionWords := wordRoles[uint8(words.Preposition)]
-
-	components := make([]string, 0)
-
-	// Subject
-	subject := GenerateNoun(contentWords)
-
-	// Verb
-	verb := GenerateContentWord(contentWords)
+func (g *Generator) GenerateVerb() string {
+	preverbWords := g.WordRoles[uint8(words.Preverb)]
+	verb := g.GenerateContentWord()
 
 	hasNegation := false
 
@@ -88,18 +114,48 @@ func GenerateSentence(wordRoles map[uint8][]string) Sentence {
 		verb += " ala"
 	}
 
+	return verb
+}
+
+func (g *Generator) GenerateSentence() Sentence {
+	components := make([]string, 0)
+
+	// Subject
+	subject := g.GenerateNoun()
+
+	// Verb
+	verb := g.GenerateVerb()
+
 	// Object
 	object := ""
 
 	if rand.IntN(3) != 0 {
 		// Has object
-		object = GenerateNoun(contentWords)
+		object = g.GenerateNoun()
+	}
+
+	// Prepositions
+	prepPhrases := make([]string, 0)
+	usedLon := false
+
+	if rand.IntN(3) == 0 {
+		prepPhraseCount := rand.IntN(2) + 1
+		for len(prepPhrases) < prepPhraseCount {
+			preposition := PickRandom(g.nonLonPrepositions)
+
+			if !usedLon && rand.IntN(2) == 0 {
+				preposition = "lon"
+				usedLon = true
+			}
+
+			prepPhrases = append(prepPhrases, preposition+" "+g.GenerateNoun())
+		}
 	}
 
 	// Form sentence
 	sentence := subject + " "
 
-	if subject != "mi" && subject != "sina" {
+	if !(subject == "mi" || subject == "sina") {
 		sentence += "li "
 	}
 
@@ -116,33 +172,9 @@ func GenerateSentence(wordRoles map[uint8][]string) Sentence {
 		components = append(components, object)
 	}
 
-	// Prepositions
-	prepPhrases := make([]string, 0)
-	usedLon := false
-
-	if rand.IntN(3) == 0 {
-		prepPhraseCount := rand.IntN(2) + 1
-		for len(prepPhrases) < prepPhraseCount {
-			preposition := ""
-
-			if !usedLon && rand.IntN(2) == 0 {
-				preposition = "lon"
-				usedLon = true
-			} else {
-				for preposition == "" || preposition == "lon" {
-					preposition = PickRandom(prepositionWords)
-				}
-			}
-
-			prepPhrases = append(prepPhrases, preposition+" "+GenerateNoun(contentWords))
-		}
-	}
-
-	if len(prepPhrases) > 0 {
-		prepPhrasesString := strings.Join(prepPhrases, " ")
-		sentence += " " + prepPhrasesString
-
-		components = append(components, prepPhrases...)
+	for _, prepPhrase := range prepPhrases {
+		sentence += " " + prepPhrase
+		components = append(components, prepPhrase)
 	}
 
 	return Sentence{
@@ -155,7 +187,7 @@ func GenerateSentence(wordRoles map[uint8][]string) Sentence {
 	}
 }
 
-func GenerateSentences(count uint8, wordRoles map[uint8][]string) []Sentence {
+func (g *Generator) GenerateSentences(count uint8) []Sentence {
 	results := make([]Sentence, 0, count)
 	var wg sync.WaitGroup
 
@@ -165,8 +197,7 @@ func GenerateSentences(count uint8, wordRoles map[uint8][]string) []Sentence {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
-			ch <- GenerateSentence(wordRoles)
+			ch <- g.GenerateSentence()
 		}()
 	}
 

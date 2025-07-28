@@ -17,6 +17,7 @@ const (
 	Content
 	Preverb
 	Preposition
+	Pronoun
 )
 
 type WordData struct {
@@ -103,12 +104,17 @@ func LoadWords() ([]Word, error) {
 			continue
 		}
 
-		dictionaryEntry := dictionary[wordData.Word]
+		word := wordData.Word
 
-		// Word is particle by default
+		dictionaryEntry := dictionary[word]
+
 		wordRoles := make([]WordRole, 0)
 
-		if len(dictionaryEntry) != 0 {
+		if word == "mi" || word == "sina" || word == "ona" || word == "ni" {
+			wordRoles = append(wordRoles, Pronoun)
+		} else if word == "seme" {
+			wordRoles = append(wordRoles, Particle)
+		} else if len(dictionaryEntry) != 0 {
 			for _, entry := range dictionaryEntry {
 				// If any entry does not say that the word is a particle or interjection,
 				if strings.HasPrefix(entry, "(particle)") || strings.HasPrefix(entry, "(interjection)") {
@@ -124,7 +130,7 @@ func LoadWords() ([]Word, error) {
 		}
 
 		words = append(words, Word{
-			Word:  wordData.Word,
+			Word:  word,
 			Roles: getUnique(wordRoles),
 		})
 	}

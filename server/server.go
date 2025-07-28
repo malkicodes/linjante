@@ -11,10 +11,10 @@ import (
 	"malki.codes/linjante/words"
 )
 
-func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string, wordCount int) {
+func RootHandler(w http.ResponseWriter, r *http.Request, g *generation.Generator) {
 	response, _ := json.Marshal(map[string]any{
-		"message": generation.GenerateSentence(wordRoles).Sentence,
-		"words":   wordCount,
+		"message": g.GenerateSentence().Sentence,
+		"words":   g.WordCount,
 		"up":      true,
 	})
 
@@ -22,7 +22,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]s
 	w.Write(response)
 }
 
-func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8][]string) {
+func GenerateHandler(w http.ResponseWriter, r *http.Request, g *generation.Generator) {
 	countRaw := r.URL.Query().Get("count")
 
 	var count uint8
@@ -44,7 +44,7 @@ func GenerateHandler(w http.ResponseWriter, r *http.Request, wordRoles map[uint8
 
 	verbose := r.URL.Query().Get("v")
 
-	sentences := generation.GenerateSentences(count, wordRoles)
+	sentences := g.GenerateSentences(count)
 
 	var data any
 
@@ -121,10 +121,10 @@ func getRoleNames(roles []words.WordRole) []string {
 	return roleNames
 }
 
-func WordsHandler(w http.ResponseWriter, r *http.Request, words []words.Word) {
+func WordsHandler(w http.ResponseWriter, r *http.Request, g *generation.Generator) {
 	wordList := make(map[string]map[string]any)
 
-	for _, word := range words {
+	for _, word := range g.WordList {
 		wordList[word.Word] = map[string]any{
 			"word": word.Word,
 			"role": getRoleNames(word.Roles),
@@ -142,29 +142,19 @@ func WordsHandler(w http.ResponseWriter, r *http.Request, words []words.Word) {
 	w.Write(response)
 }
 
-func RunServer(port int, words []words.Word) error {
+func RunServer(port int) error {
 	mux := http.NewServeMux()
 
-	wordRoles := make(map[uint8][]string)
-	wordCount := len(words)
-
-	for _, word := range words {
-		for _, role := range word.Roles {
-			wordList, prs := wordRoles[uint8(role)]
-
-			if !prs {
-				wordRoles[uint8(role)] = []string{word.Word}
-			} else {
-				wordRoles[uint8(role)] = append(wordList, word.Word)
-			}
-		}
+	generator, err := generation.NewGenerator()
+	if err != nil {
+		return err
 	}
 
 	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.EscapedPath()
 
 		if path == "/" {
-			RootHandler(w, r, wordRoles, wordCount)
+			RootHandler(w, r, &generator)
 		} else {
 			errors.HandleNotFoundError(w)
 		}
@@ -174,7 +164,7 @@ func RunServer(port int, words []words.Word) error {
 		path := r.URL.EscapedPath()
 
 		if path == "/gen" {
-			GenerateHandler(w, r, wordRoles)
+			GenerateHandler(w, r, &generator)
 		} else {
 			errors.HandleNotFoundError(w)
 		}
@@ -184,7 +174,7 @@ func RunServer(port int, words []words.Word) error {
 		path := r.URL.EscapedPath()
 
 		if path == "/gen" {
-			WordsHandler(w, r, words)
+			WordsHandler(w, r, &generator)
 		} else {
 			errors.HandleNotFoundError(w)
 		}
