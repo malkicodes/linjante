@@ -2,6 +2,8 @@
 
 An API that randomly generates Toki Pona sentences. (My first API written in Go)
 
+Try the API now! [https://linjante.malki.codes/](https://linjante.malki.codes/)
+
 All data for words is from [sona Linku](https://github.com/lipu-linku/sona).
 
 ## Installation
